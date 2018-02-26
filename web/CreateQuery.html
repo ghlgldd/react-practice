@@ -1,0 +1,414 @@
+﻿<!DOCTYPE HTML>
+<html>
+<head>
+	<title></title>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=EmulateIE10">
+	<link rel="stylesheet" type="text/css" href="css/kendo.common.min.css">
+	<link rel="stylesheet" type="text/css" href="css/kendo.default.min.css">
+	<link rel="stylesheet" type="text/css" href="css/manageSys.css">
+	<script src="lib/kendo/js/jquery.min.js"></script>
+	<script src="lib/kendo/js/kendo.custom.min.js"></script>
+	<script src="lib/kendo/js/jszip.min.js"></script>
+	<script src="js/wp.js"></script>
+</head>
+
+<body>
+	<div id="user_id" style="display:none"></div>
+	<div id="first_name" style="display:none"></div>
+	<div id="last_name" style="display:none"></div>
+	<div id="win">
+		<div id="win_content"></div>
+	</div>
+    <div id="global_alert_win"><p></p><span class="btn no"></span><span class="btn yes"></span></div>
+<script id="create_query_page" type="text/x-kendo-template">
+	<div id="create_query_page_frame" style="width:739px;">
+<div style="margin-bottom:10px;margin-left: 240px;" >
+    	<span id="Errormessage"  data-bind="text: errormessage" style="font-weight: bold; color:Red"></span>
+    </div>
+
+			<div class="create_content_frame_left">
+				<span class="create_span">Study*</span>
+				<input id="create_study" style="width:20em;"  />
+			</div>
+
+			<div class="create_content_frame_right">
+				<span class="create_span" style="padding-right:71px;">Site*</span>
+				<input id="create_site"  style="width:18.7em;height:27px;border-radius:4px;border:solid 1px #c5c5c5;padding-left:0.5em;" disabled="disabled" />
+			</div>
+
+			<div class="create_content_frame_left">
+				<span class="create_span" style="padding-right:1.1em;">Patient ID*</span>
+				<input id="create_patientid" style="width:20em;"  />
+			</div>
+
+			<div class="create_content_frame_right">
+				<span class="create_span" style="padding-right:68px;">CRF*</span>
+				<input id="create_crf" style="width:20em;"  />
+			</div>
+
+			<div class="create_content_frame_left">
+				<span class="create_span" style="padding-right:3.5em;">Visit*</span>
+				<input id="create_visit" style="width:20em;"  />
+			</div>
+
+			<div class="create_content_frame_right">
+				<span class="create_span">Assign to*</span>
+				<input id="create_assignto" style="width:20em;"  />
+			</div>
+
+			<div class="create_content_frame_left" >
+				<span class="create_span" style="top:8px">Issue*</span>
+				<input id="issue" type="text" style="width:19em;height:30px;padding-left:5px;float:left;" placeholder="Issue title" maxlength="3999"/>
+			</div>
+
+			<div class="create_content_frame_right">
+				<span class="create_span" style="padding-right:4.5em;">Status*</span>
+				<input id="create_status" style="width:18.8em;height:27px;border-radius:4px;border:solid 1px #c5c5c5;padding-left:0.5em" disabled="disabled" value="Open" />
+			</div>
+
+			<div class="create_content_frame_text" style="margin-bottom:15px;margin-top:-10px;">
+				<span class="create_span" style="top:20px;">Query Text*</span>
+				<textarea id="query_text" type="text" style="width:89%;height:102px;padding-left:5px;padding-top:4px;float:right;line-height20px;" placeholder="Enter query details here" maxlength="3999"></textarea>
+			</div>
+
+			<div class="create_content_frame_left" >
+				<span class="create_span" style="top:8px;padding-right:0.5em;">Opened By</span>
+				<input id="create_usename" style="width:18.7em;height:30px;border-radius:4px;border:solid 1px #c5c5c5;padding-left:0.5em" data-bind="value:username" disabled="disabled" />
+			</div>
+
+			<div class="create_content_frame_right">
+				<span class="create_span" style="top:8px;padding-right:33px;">Open Date</span>
+				<input id="create_date" style="width:18.7em;height:30px;border-radius:4px;border:solid 1px #c5c5c5;padding-left:0.5em" data-bind="value:nowdate" disabled="disabled" />
+			</div>
+
+			<div class="create_button" style="top:355px;left:556px;">
+				<button type="button" class="k-button" id="create_create_button" data-bind="click:create" >Create</button>
+				<button type="button" class="k-button" id="create_cancel" data-bind="click:cancel" style="background-color:#BFBFBF!important" >Cancel</button>
+			</div>
+            <div style="position:absolute;top:-999px;left:-999px;display:none">
+                <input id="create_clickme" style="width:30px;"/>
+            </div>
+	</div>
+</script>
+
+<script>
+    var create_outside = (function () {
+        var login_username = "";
+        var ErrorMessage = "";
+        var SpotfireQueryID = '';
+        var user_id = $('#user_id').text();
+        function to_utctime() {
+            var _time_lag = new Date().getTimezoneOffset();
+            _time_lag = _time_lag * 60 * 1000;
+            var local_seconds = new Date().getTime();
+            var utc_seconds = local_seconds + _time_lag;
+            var utc_time_a = kendo.toString(new Date(utc_seconds), 'MM/dd/yyyy h:mm:ss tt');
+            return utc_time_a;
+        };
+        function create_query_vm_outside(a,b,c,d,data) {
+            var create_study = $("#create_study").kendoDropDownList({
+                enable:false,
+                dataTextField: "StudyName",
+                dataValueField: "StudyId",
+                filter: "contains",
+                dataSource: a
+            }).data("kendoDropDownList");
+            
+            var create_patientid = $("#create_patientid").kendoDropDownList({
+                enable:false,
+                dataTextField: "PatientId",
+                dataValueField: "SiteId",
+                filter: "contains",
+                dataSource: b,
+                close:function(){
+                    $('#create_site').val(this.value());
+                }
+            }).data("kendoDropDownList");
+
+            var create_crf = $("#create_crf").kendoDropDownList({
+                enable:false,
+                dataTextField: "CRFName",
+                dataValueField: "CRFId",
+                filter: "contains",
+                dataSource: c
+            }).data("kendoDropDownList");
+            var create_visit = $("#create_visit").kendoDropDownList({
+                enable:false,
+                dataTextField: "VisitName",
+                dataValueField: "VisitId",
+                filter: "contains",
+                dataSource: [{"VisitName":data.Visit,"VisitId":data.Visit}]
+            }).data("kendoDropDownList");
+
+            var create_assignto = $("#create_assignto").kendoDropDownList({
+                autoBind: true,
+                dataSource: ["DM", "CRA"]
+            }).data("kendoDropDownList");
+            
+
+            var create_clickme = $("#create_clickme").kendoDropDownList({
+                dataSource: ["a"]
+            }).data("kendoDropDownList");
+
+
+            var vm = kendo.observable({
+                data: data,
+                nowdate: function () {
+                    return kendo.toString(new Date(), 'MMM dd, yyyy')
+                },
+                cancel: function () {
+                     $("#win").data("kendoWindow").close();
+                },
+                username: function () {
+                    return login_username
+                },
+                errormessage: function () {
+                    return ErrorMessage
+                },
+                create: function () {
+                    $('#create_query_page_frame').prepend('<div id="create_loading" style="width: 100%;height: 100%;position: absolute;cursor: wait;z-index: 99999;background-color:rgba(0,0,0,0);"></div>');
+                    var create_site = $("#create_site");
+                    var create_study = $("#create_study").data('kendoDropDownList');
+                    var create_patientid = $("#create_patientid").data('kendoDropDownList');
+                    var create_crf = $("#create_crf").data('kendoDropDownList');
+                    var create_visit = $("#create_visit").data('kendoDropDownList');
+                    var create_assignto = $("#create_assignto").data('kendoDropDownList');
+                    var _a = create_study.value(), _b = $('#create_site').val(), _c = create_patientid.text(), _d = create_crf.value(), _e = create_visit.text(), _f = create_assignto.value(), _g = $('#query_text').val(), _h = $('#issue').val(), _i = to_utctime();
+                    var _a_text = create_study.text(), _b_text = create_site.val(), _d_text = create_crf.text(), _e_text = create_visit.text();
+
+                    var _create_upload_data = [{ "StudyId": _a, "StudyName": _a_text, "SiteId": _b, "SiteName": _b, "PatientID": _c, "CRFId": _d, "CRFName": _d_text, "VisitId": _e, "VisitName": _e_text, "Issue": _h, "QueryText": _g, "AssignTo": _f, "Openedby": login_username, "OpenedById": user_id, "OpenDate": _i, "SpotfireQueryID": SpotfireQueryID }];
+                    if (_a == "" || _c == "" || _d == "" || _e == "" || _f == "" || _g == "" || _h == "") {
+                        $('#create_loading').remove();
+                        manageSys.utils.alertMsg("Confirmation alert", "Please fill all the attributes", function () { });
+                        return
+                    }
+                    var create_datasource = new kendo.data.DataSource({
+                        transport: {
+                            read: {
+                                dataType: "json",
+                                contentType: 'application/json',
+                                url: QMT_RESTFUL_URL + "QMT/PostCreateQuery",
+                                type: "POST"
+                            },
+                            parameterMap: function () {
+                                return JSON.stringify(_create_upload_data);
+                            }
+                        },
+                        schema: {
+                            data: function (response) {
+                                if(response.ResponseMessage == "Operation Successful"){
+                                    $('#create_loading').remove();
+                                    $('#win').data("kendoWindow").close();
+                                    var _query_id = response.CreateResponse[0].QueryId;
+                                    manageSys.utils.alertMsg("Confirmation alert", 'Clinical Data Query ' + _query_id + "  is successfully created", function () {});
+                                }else {
+                                    $('#create_create_button').removeAttr("disabled");
+                                }
+                                $('#create_loading').remove();
+                                return [];
+                            }
+                        },
+                        error: function (response) {
+                            $('#create_loading').remove();
+                            manageSys.utils.alertMsg("Confirmation alert", response.status, function () { });
+                            $('#create_create_button').removeAttr("disabled");
+                        }
+                    });
+                    create_datasource.read();
+                    $('#create_create_button').attr("disabled", "disabled");
+                }
+            });
+            return vm;
+        }
+        function UrlParamHash(url) {
+            var params = { "pPatientID": "", "pStudyID": "", "pDrugProgramCode": "", "Visit": "", "SpotfireQueryID": "", "pSiteID": "", "SpotfireQueryID": "","Crf": "" }, h;
+            var hash = url.slice(url.indexOf("?") + 1).split('&');
+            for (var i = 0; i < hash.length; i++) {
+                h = hash[i].split("=");
+                if (h[0] == "pPatientID") {
+                    params.pPatientID = h[1];
+                } else if (h[0] == "pStudyID") {
+                    params.pStudyID = h[1];
+                } else if (h[0] == "pDrugProgramCode") {
+                    params.pDrugProgramCode = h[1];
+                } else if (h[0] == "pVisit") {
+                    params.Visit = h[1];
+                } else if (h[0] == "SpotfireQueryID") {
+                    params.SpotfireQueryID = h[1];
+                } else if (h[0] == "pSiteID") {
+                    params.pSiteID = h[1];
+                } else if (h[0] == "SpotfireQueryID") {
+                    params.SpotfireQueryID = h[1];
+                } else if (h[0] == "pCRF") {
+                    params.Crf = h[1].replace(/%20/ig,' ');
+                }
+            }
+            return params;
+        }
+        return {
+            init: function () {
+                $('#create_loading').remove();
+                $.ajaxSetup({
+                    beforeSend: function (xhr) {
+                        xhr.setRequestHeader("UserId", user_id);
+                    }
+                });
+                create_outside.getUserName();
+                $("#win").kendoWindow({
+                    height: '400px',
+                    width: '800px',
+                    title: "Create New Query",
+                    modal: true,
+                    visible: false,
+                    resizable: false,
+                    draggable: false,
+                    animation: {
+                        open: {
+                            duration: 100
+                        }
+                    },
+                    visible: false
+                });
+                $("#win").data("kendoWindow").open().center();
+                $("#win").prepend('<div id="load" style="text-align: center;top: 44%;position: absolute;left: 47%;font-size: 12pt;">Loading...</div>');
+            },
+            getUserName: function () {
+                var _datasource_username = new kendo.data.DataSource({
+                    transport: {
+                        read: {
+                            dataType: "json",
+                            url: QMT_RESTFUL_URL + "QMT/GetUserDetailsbyId",
+                        }
+                    },
+                    schema: {
+                        data: function (response) {
+                            return [response]
+                        }
+                    },
+                    error: function () {
+                        manageSys.utils.alertMsg("Confirmation alert", 'Error Please Reload This Page', function () { });
+                    }
+                });
+                _datasource_username.read().then(function () {
+                    if (_datasource_username.data()[0].ResponseCode != "WP2027") {
+                        login_username = _datasource_username.data()[0].FirstName;
+                        var _url = window.location.search;
+                        var url_array = UrlParamHash(_url);
+                        var search_patient_id = url_array.pPatientID;
+                        if(url_array.pPatientID.length > 5 ){
+                            search_patient_id = url_array.pPatientID.split('',5);
+                            search_patient_id = search_patient_id.join();
+                            search_patient_id = search_patient_id.replace(/,/g,"");
+                        }
+
+                        SpotfireQueryID = url_array.SpotfireQueryID;
+                        var filterCondition = {};
+                        filterCondition.SearchString = search_patient_id;
+                        filterCondition.StudyList = [];
+                        filterCondition.StudyList[0] = {StudyId:url_array.pStudyID};
+                        
+                        var _datasource_patientid = new kendo.data.DataSource({
+                            transport: {
+                                read: {
+                                    dataType: "json",
+                                    contentType:'application/json',
+                                    url: QMT_RESTFUL_URL+"QMT/PatientIdList",
+                                    type:"POST"
+                                },
+                                parameterMap:function(){
+                                    return JSON.stringify(filterCondition);
+                                }
+                            },
+                            schema:{
+                                data:"PatientDetailsList"
+                            }
+                        });
+
+                        var _datasource_crf = new kendo.data.DataSource({
+                            transport: {
+                                read: {
+                                        dataType: "json",
+                                        url: QMT_RESTFUL_URL+"QMT/GetOtherFieldList?StudyId="+url_array.pStudyID
+                                    }
+                            },
+                            schema:{
+                                    data:function(response){
+                                        return [response]
+                                    }
+                            }
+                        });                    
+
+                        var datasoucestudy = new kendo.data.DataSource({
+                                transport: {
+                                        read: {
+                                            dataType: "json",
+                                            url: QMT_RESTFUL_URL+"QMT/GetStudyList"
+                                        },
+                                    },
+                                schema:{
+                                        data:"StudyDetailsList"
+                                }
+                        });
+
+                        $.when(datasoucestudy.read(),_datasource_patientid.read(),_datasource_crf.read()).done(function(){
+                                var _study_data = datasoucestudy.data();
+                                var _patientid_data =  _datasource_patientid.data();
+                                var _crf_data = _datasource_crf.data()[0].CRFDetailsList;
+                                var _visit_data = _datasource_crf.data()[0].VisitDetailsList;
+                                var _server_siteid = '';
+                                $('#load').remove();
+                                $('#win_content').html($('#create_query_page').html());
+                                var viewModel = create_query_vm_outside(_study_data,_patientid_data,_crf_data,_visit_data,url_array);
+                                kendo.bind($('#win_content'), viewModel);
+                                $('#create_clickme').trigger('click');
+                                $('#create_clickme-list').css('display','none');
+                                var create_study = $("#create_study").data('kendoDropDownList');
+                                var create_patientid = $("#create_patientid").data('kendoDropDownList');
+                                var create_crf = $("#create_crf").data('kendoDropDownList');
+                                var create_visit = $("#create_visit").data('kendoDropDownList');
+                                for(var i= 0 ;i<_patientid_data.length;i++){
+                                    if(_patientid_data[i].PatientId == url_array.pPatientID){
+                                        _server_siteid = _patientid_data[i].SiteId;
+                                    }
+                                }
+                                $('#create_site').val(_server_siteid);
+                                create_study.value(url_array.pStudyID);
+                                create_patientid.text(url_array.pPatientID);
+                                create_crf.value(url_array.Crf);
+                                create_visit.text(url_array.Visit);
+                        });
+                    }
+                    else {
+                        //display error message and disable all actions
+                        login_username = _datasource_username.data()[0].FirstName;
+                        ErrorMessage = "You are not authorized to create a query";
+                        var _url = window.location.search;
+                        var url_array = UrlParamHash(_url);
+                        SpotfireQueryID = url_array.SpotfireQueryID;
+                        $('#load').remove();
+                        $('#win_content').html($('#create_query_page').html());
+                        var viewModel = create_query_vm_outside([],[],[],[],url_array);
+                        kendo.bind($('#win_content'), viewModel);
+                        $('#create_create_button').remove();
+                        $('#create_cancel').remove();
+                    }
+                });
+            },
+        }
+
+    })();
+    $(document).ready(function () {
+        $(function () {
+            create_outside.init();
+        });
+	setTimeout(function () {
+		$("#issue").removeAttr('disabled');
+		$('#issue').focus();
+
+         }, 1500);
+    })
+
+</script>
+</body>
+</html>
